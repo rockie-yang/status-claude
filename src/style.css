@@ -1,0 +1,50 @@
+/* VS Code Monokai / Dark+ color variables */
+:root {
+    --bg-primary: #1e1e1e;
+    --bg-secondary: #252526;
+    --bg-tertiary: #2d2d30;
+    --bg-hover: #3e3e42;
+    --text-primary: #d4d4d4;
+    --text-secondary: #858585;
+    --text-muted: #5a5a5a;
+    --accent-blue: #569cd6;
+    --accent-green: #4ec9b0;
+    --accent-yellow: #dcdcaa;
+    --accent-orange: #ce9178;
+    --accent-red: #f44747;
+    --accent-purple: #c586c0;
+    --border: #3e3e42;
+    --border-light: #4e4e52;
+
+    /* Status semantic colors */
+    --status-none: #4ec9b0;
+    --status-minor: #dcdcaa;
+    --status-major: #ce9178;
+    --status-critical: #f44747;
+    --status-maintenance: #569cd6;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+#app {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 16px 60px;
+}
+
+/* scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-secondary); }
+::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 3px; }
