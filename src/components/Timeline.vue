@@ -7,19 +7,37 @@
             <button class="add-tz-btn" @click="showPicker = true">＋ Add timezone</button>
         </div>
 
-        <div class="tl-key">
+        <!-- <div class="tl-key">
             <span class="key-item"><span class="key-sw night-sw"></span>Night</span>
-            <span class="key-item"><span class="key-sw twilight-sw"></span>Twilight</span>
             <span class="key-item"><span class="key-sw day-sw"></span>Day</span>
             <span class="key-sep">·</span>
-            <span class="key-item"><span class="key-sw peak-sw"></span>Peak Claude</span>
-            <span class="key-item"><span class="key-sw inc-sw"></span>Incident</span>
+            <span class="key-item"><span class="key-sw usage-lo-sw"></span>Low usage</span>
+            <span class="key-item"><span class="key-sw usage-hi-sw"></span>High usage</span>
             <span class="key-sep">·</span>
-            <span class="key-item"><span class="key-border-sw"></span>Work hours (8h)</span>
-        </div>
+            <span class="key-item"><span class="key-border-sw"></span>Work 9–17</span>
+        </div> -->
 
         <!-- CSS var drives the single shared NOW line position in each row -->
         <div class="tz-rows" ref="rowsEl" :style="{ '--now': nowPct }">
+            <!-- UTC row: hour ruler + global usage/incident band -->
+            <div class="tz-row utc-header-row">
+                <div class="tz-label">
+                    <span class="tz-flag">🌐</span>
+                    <div class="tz-info">
+						<span class="tz-city">UTC</span>
+						<span class="tz-time">Global usage</span>
+					</div>
+                </div>
+                <div class="tz-bands-wrap">
+                    
+                    <div class="band usage-band utc-usage-band">
+                        <div v-for="h in 24" :key="h" class="slot" :style="{ background: utcBand[h-1] }" >
+							<span>{{ String(h-1).padStart(2,'0') }}</span>
+							</div>
+                    </div>
+                </div>
+            </div>
+
             <div v-for="tz in timezones" :key="tz.id" class="tz-row">
 
                 <div class="tz-label">
@@ -45,7 +63,7 @@
                     </div> -->
 
                     <!-- work hours border overlay (full height, no fill) -->
-                    <div class="work-border" :style="workBorderStyle(tz.id)">working</div>
+                    <div class="work-border" :style="workBorderStyle(tz.id)">working hours</div>
 
                     <!-- Band 1: Sun / day / night — absolute rects over dark background -->
                     <div class="band sun-band">
@@ -54,7 +72,7 @@
                             :key="i"
                             class="sun-rect"
                             :style="{ left: rect.left, width: rect.width }"
-                        >day</div>
+                        >day time</div>
                     </div>
 
                     <!-- Band 2: Peak usage / incidents -->
@@ -63,21 +81,16 @@
                             v-for="h in 24" :key="h"
                             class="slot"
                             :style="{ background: tzData[tz.id]?.usage[h - 1] }"
-                        />
+                        ><span>{{localLabel(h - 1, tz.id)}}</span></div>
                     </div>
 
                     <!-- Hour ruler: local time labels at every 3rd UTC hour -->
-                    <div class="ruler">
-                        <span v-for="h in 24" :key="h">
-                            <!-- {{ (h - 1) % 3 === 0 ? localLabel(h - 1, tz.id) : '' }} -->
-							{{localLabel(h - 1, tz.id)}}
-                        </span>
-                    </div>
+
                 </div>
             </div>
 
 			<div class="now-line">
-				<div class="now-bubble">{{ nowLabel }}</div>
+				<!-- <div class="now-bubble">{{ nowLabel }}</div> -->
 			</div>
         </div>
 
@@ -114,13 +127,15 @@ const props = defineProps({
 })
 
 const ALL_TZ = [
+	
     { id: 'Europe/Stockholm',    city: 'Stockholm',    flag: '🇸🇪' },
     { id: 'America/New_York',    city: 'New York',      flag: '🇺🇸' },
     { id: 'America/Los_Angeles', city: 'San Francisco', flag: '🌉' },
+	{ id: 'Asia/Shanghai',       city: 'Shanghai',      flag: '🇨🇳' },
     { id: 'Europe/London',       city: 'London',        flag: '🇬🇧' },
     { id: 'Europe/Paris',        city: 'Paris',         flag: '🇫🇷' },
     { id: 'Asia/Tokyo',          city: 'Tokyo',         flag: '🇯🇵' },
-    { id: 'Asia/Shanghai',       city: 'Shanghai',      flag: '🇨🇳' },
+    
     { id: 'Asia/Singapore',      city: 'Singapore',     flag: '🇸🇬' },
     { id: 'Asia/Kolkata',        city: 'Mumbai',        flag: '🇮🇳' },
     { id: 'Australia/Sydney',    city: 'Sydney',        flag: '🇦🇺' },
@@ -130,9 +145,10 @@ const ALL_TZ = [
     { id: 'Pacific/Auckland',    city: 'Auckland',      flag: '🇳🇿' },
     { id: 'America/Toronto',     city: 'Toronto',       flag: '🇨🇦' },
     { id: 'Europe/Berlin',       city: 'Berlin',        flag: '🇩🇪' },
+	{ id: 'UTC', city: 'UTC', flag: '🌍' },
 ]
 
-const timezones  = ref([ALL_TZ[0], ALL_TZ[1], ALL_TZ[2]])
+const timezones  = ref([ALL_TZ[0], ALL_TZ[1], ALL_TZ[2], ALL_TZ[3]])
 const rowsEl     = ref(null)
 const showPicker = ref(false)
 const search     = ref('')
@@ -187,20 +203,56 @@ function buildSunRects(tzId) {
     ]
 }
 
-function usageColor(utcH, tzId, incidentImpact) {
+// D3 RdYlGn 11-stop palette — index 0 = dark red, index 10 = dark green
+const RDYLGN = [
+    [165,0,38],[215,48,39],[244,109,67],[253,174,97],[254,224,139],
+    [255,255,191],[217,239,139],[166,217,106],[102,189,99],[26,152,80],[0,104,55]
+]
+
+// t=0 → red, t=1 → green; intensity dims the result so night slots appear near-black
+function rdYlGn(t, intensity) {
+    const s   = Math.max(0, Math.min(1, t)) * (RDYLGN.length - 1)
+    const lo  = Math.floor(s), hi = Math.min(lo + 1, RDYLGN.length - 1)
+    const f   = s - lo
+    const dim = Math.max(0, Math.min(1, intensity))
+    const r   = Math.round((RDYLGN[lo][0] + f * (RDYLGN[hi][0] - RDYLGN[lo][0])) * dim)
+    const g   = Math.round((RDYLGN[lo][1] + f * (RDYLGN[hi][1] - RDYLGN[lo][1])) * dim)
+    const b   = Math.round((RDYLGN[lo][2] + f * (RDYLGN[hi][2] - RDYLGN[lo][2])) * dim)
+    return `rgb(${r},${g},${b})`
+}
+
+// Per-city: pure local-time pattern only, no incidents (incidents go on UTC row)
+function usageColor(utcH, tzId) {
     const off    = getOffset(tzId)
     const localH = ((utcH + off) % 24 + 24) % 24
-    const inPeak = localH >= 10 && localH < 16 // fixed peak window 10–16 local
 
-    if (incidentImpact === 'critical') return `rgba(244,71,71,${inPeak ? 0.9 : 0.7})`
-    if (incidentImpact === 'major')    return `rgba(206,145,120,${inPeak ? 0.85 : 0.65})`
-    if (incidentImpact === 'minor')    return `rgba(220,220,170,${inPeak ? 0.75 : 0.5})`
-
-    if (inPeak) {
-        const dist = Math.abs(localH - 13) / 3 // midpoint 13, half-width 3
-        return `rgba(78,201,176,${(0.5 + (1 - dist) * 0.5).toFixed(2)})`
+    let intensity = 0
+    if (localH >= 10 && localH < 16) {
+        const dist = Math.abs(localH - 13) / 3 // 0 at center 13, 1 at edges
+        intensity  = 0.6 + (1 - dist) * 0.4    // 0.6–1.0
+    } else if (localH >= 7 && localH < 10) {
+        intensity = (localH - 7) / 3 * 0.6     // ramp up 0→0.6
+    } else if (localH >= 16 && localH < 20) {
+        intensity = (1 - (localH - 16) / 4) * 0.6 // ramp down 0.6→0
     }
-    return '#0d1118'
+    return rdYlGn(1 - intensity, intensity)
+}
+
+// Global UTC usage baseline (0–23 UTC), peaks during US daytime
+const UTC_BASELINE = [
+    0.05, 0.04, 0.03, 0.03, 0.04, 0.06,
+    0.12, 0.18, 0.26, 0.36, 0.48, 0.60,
+    0.70, 0.80, 0.88, 0.92, 0.88, 0.78,
+    0.62, 0.46, 0.32, 0.20, 0.12, 0.07
+]
+
+// UTC row color: global baseline + incident overlay
+function utcBandColor(utcH, incidentImpact) {
+    let intensity = UTC_BASELINE[utcH]
+    if (incidentImpact === 'critical') intensity = 1.0
+    else if (incidentImpact === 'major')  intensity = Math.max(intensity, 0.80)
+    else if (incidentImpact === 'minor')  intensity = Math.max(intensity, 0.60)
+    return rdYlGn(1 - intensity, intensity)
 }
 
 // ── Build incident map keyed by UTC hour ─────────────────────────
@@ -223,16 +275,19 @@ function buildIncidentMap() {
     return { map }
 }
 
-// Recompute all band data for all timezones
+const utcBand = ref([]) // global usage + incidents for UTC row
+
 function rebuildData() {
     const { map } = buildIncidentMap()
+    // UTC row: global baseline + incidents
+    utcBand.value = Array.from({ length: 24 }, (_, h) => utcBandColor(h, map[h]))
+    // Per-city: local time pattern only, no incidents
     const result = {}
     for (const tz of timezones.value) {
-        const usage = []
-        for (let h = 0; h < 24; h++) {
-            usage.push(usageColor(h, tz.id, map[h]))
+        result[tz.id] = {
+            sunRects: buildSunRects(tz.id),
+            usage: Array.from({ length: 24 }, (_, h) => usageColor(h, tz.id))
         }
-        result[tz.id] = { sunRects: buildSunRects(tz.id), usage }
     }
     tzData.value = result
 }
@@ -355,10 +410,9 @@ watch(timezones, () => { rebuildData(); nextTick(updateClocks) }, { deep: true }
 .key-sep  { color: var(--text-muted); }
 .key-sw   { border-radius: 2px; display: inline-block; height: 8px; width: 14px; }
 .night-sw    { background: #06061a; border: 1px solid #2a2a3a; }
-.twilight-sw { background: #7d3c0a; }
 .day-sw      { background: #1b5280; }
-.peak-sw     { background: #4ec9b0; }
-.inc-sw      { background: #dcdcaa; }
+.usage-lo-sw { background: rgb(0,104,55); }   /* RdYlGn darkest green */
+.usage-hi-sw { background: rgb(165,0,38); }   /* RdYlGn darkest red */
 .key-border-sw {
     border: 1px solid rgba(86,156,214,0.6);
     border-radius: 2px;
@@ -368,7 +422,12 @@ watch(timezones, () => { rebuildData(); nextTick(updateClocks) }, { deep: true }
 }
 
 /* rows */
-.tz-rows { display: flex; flex-direction: column; gap: 8px; position: relative;}
+.tz-rows { display: flex; flex-direction: column; gap: 8px; position: relative; }
+
+/* UTC header row */
+/* .utc-header-row .tz-city { color: var(--text-muted); font-size: 11px; } */
+.utc-ruler span { color: var(--accent-blue); font-size: 9px; opacity: 0.7; }
+.utc-usage-band { height: 10px; opacity: 0.75; }
 
 .tz-row { align-items: stretch; display: flex; }
 
@@ -397,7 +456,7 @@ watch(timezones, () => { rebuildData(); nextTick(updateClocks) }, { deep: true }
 .tz-time {
     color: var(--accent-blue);
     font-family: 'Consolas', monospace;
-    font-size: 11px;
+    font-size: 10px;
 }
 
 .tz-meta {
@@ -428,7 +487,7 @@ watch(timezones, () => { rebuildData(); nextTick(updateClocks) }, { deep: true }
     display: flex;
     flex: 1;
     flex-direction: column;
-    gap: 2px;
+    /* gap: 2px; */
     min-width: 0;
     position: relative;
 }
@@ -436,15 +495,17 @@ watch(timezones, () => { rebuildData(); nextTick(updateClocks) }, { deep: true }
 /* shared NOW line — left driven by CSS var set on .tz-rows */
 .now-line {
     bottom: 0;
-    left: calc(var(--now, 50) * 1%);
+    /* offset by 188px label area so 0% aligns with UTC-0 band edge */
+    left: calc(188px + var(--now, 0) * (100% - 188px) / 100);
     pointer-events: none;
     position: absolute;
     top: 0;
     width: 2px;
     z-index: 3;
 	height: 100%;
-    background: rgba(86,156,214,0.8);
-    box-shadow: 0 0 6px #569cd6;
+    /* background: rgba(86,156,214,0.8); */
+	background: #d9ef8c;
+    /* box-shadow: 0 0 6px #569cd6; */
 }
 
 .now-bubble {
@@ -465,33 +526,47 @@ watch(timezones, () => { rebuildData(); nextTick(updateClocks) }, { deep: true }
 /* work hours border overlay — no fill, just border */
 .work-border {
     /* border: 1px solid rgba(86,156,214,0.45); */
-	background: #9c7c4a;
+	background: #988653;
+	height: 12px;
+    padding-left: 5px;;
 	font-size: 9px;
-	padding-left: 5px;;
-    border-radius: 3px;
     bottom: 16px; /* above ruler */
     pointer-events: none;
     position: absolute;
     top: 0;
-	height: 12px;
     z-index: 2;
 }
 
 /* bands */
-.band { border-radius: 3px; overflow: hidden; }
+.band { 
+	/* border-radius: 3px;  */
+	overflow: hidden; }
 
 .usage-band {
     display: grid;
-    gap: 1px;
+    /* gap: 1px; */
     grid-template-columns: repeat(24, 1fr);
 }
 
 .sun-band   { background: #06061a; height: 12px; position: relative;}
 .usage-band { height: 22px; }
 
-.sun-rect { border-radius: 2px; bottom: 0; position: absolute; top: 0; background: #dcdcaa; color: black;font-size: 9px; padding-left: 5px;}
+.sun-rect { 
+	/* border-radius: 2px;  */
+	bottom: 0; position: absolute; top: 0; 
+	background: #1a9850;
+	height: 12px;
+    padding-left: 5px;
+	font-size: 9px;
+}
 
-.slot { border-radius: 2px; height: 100%; }
+.slot { 
+	/* border-radius: 2px;  */
+	height: 100%; 
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
 
 /* hour ruler */
 .ruler {
@@ -500,6 +575,7 @@ watch(timezones, () => { rebuildData(); nextTick(updateClocks) }, { deep: true }
     height: 14px;
 }
 
+.slot span,
 .ruler span {
     color: #4a4a5a;
     font-family: 'Consolas', monospace;
