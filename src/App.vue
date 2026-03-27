@@ -1,8 +1,12 @@
 <template>
     <div class="app">
+        <!-- rotating earth as page background -->
+        <div class="bg-earth">
+            <div class="bg-earth-night" />
+            <div class="bg-earth-depth" />
+        </div>
         <header class="app-header">
             <div class="header-logo">
-                
                 <div class="logo-text">
                     <h1><span class="logo-hex">⬡</span><span>Claude Status</span></h1>
                     <span class="logo-sub">Anthropic API · Real-time dashboard</span>
@@ -53,20 +57,16 @@
             </div>
         </section>
 
-        <section class="main-section">
-            <Earth :status="overallStatus" />
-        </section>
-
         <footer class="app-footer">
             <span>Data from
                 <a href="https://status.anthropic.com" target="_blank" rel="noopener">status.anthropic.com</a>
                 · Refreshes every 5 min
             </span>
-            <span class="footer-legend">
+            <!-- <span class="footer-legend">
                 <span v-for="item in heatLegend" :key="item.label" class="heat-item">
                     <span class="heat-swatch" :style="{ background: item.color }" />{{ item.label }}
                 </span>
-            </span>
+            </span> -->
         </footer>
     </div>
 </template>
@@ -74,7 +74,6 @@
 <script setup>
 import { computed } from 'vue'
 import Timeline from './components/Timeline.vue'
-import Earth from './components/Earth.vue'
 import { useStatus, IMPACT, COMP_STATUS } from './composables/useStatus.js'
 
 const { incidents, components, overallStatus, loading, error } = useStatus()
@@ -105,6 +104,58 @@ const heatLegend = [
     flex-direction: column;
     gap: 16px;
     padding-top: 20px;
+    position: relative;
+    z-index: 0;
+}
+
+/* ── background rotating earth ─────────────────────────────────── */
+.bg-earth {
+    animation: bgEarthSpin 120s linear infinite;
+    background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Land_ocean_ice_2048.jpg/2048px-Land_ocean_ice_2048.jpg');
+    background-repeat: repeat-x;
+    background-size: 200% 100%;
+    border-radius: 50%;
+    height: 900px;
+    left: 50%;
+    opacity: 0.18;
+    pointer-events: none;
+    position: fixed;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 900px;
+    z-index: -1;
+}
+
+.bg-earth-night {
+    background: linear-gradient(
+        to left,
+        rgba(0,0,20,0.85) 0%,
+        rgba(0,0,20,0.85) 44%,
+        rgba(0,0,10,0.3)  50%,
+        transparent 56%,
+        transparent 100%
+    );
+    border-radius: 50%;
+    height: 100%;
+    left: 0;
+    position: absolute;
+    top: 0;
+    width: 100%;
+}
+
+.bg-earth-depth {
+    border-radius: 50%;
+    box-shadow: inset -80px 0 160px rgba(0,0,0,0.95), inset 20px 20px 60px rgba(0,0,40,0.4);
+    height: 100%;
+    left: 0;
+    position: absolute;
+    top: 0;
+    width: 100%;
+}
+
+@keyframes bgEarthSpin {
+    from { background-position-x: 0%; }
+    to   { background-position-x: -200%; }
 }
 
 .app-header {
@@ -116,7 +167,7 @@ const heatLegend = [
 
 .header-logo { align-items: center; display: flex; gap: 14px; }
 
-.logo-hex { color: var(--accent-blue); font-size: 36px; line-height: 1; padding-right: 10px;;}
+.logo-hex { color: var(--accent-blue); font-size: 36px; line-height: 1; padding-right: 10px; }
 
 .logo-text h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; }
 

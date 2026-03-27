@@ -132,12 +132,13 @@ const ALL_TZ = [
     { id: 'America/New_York',    city: 'New York',      flag: '🇺🇸' },
     { id: 'America/Los_Angeles', city: 'San Francisco', flag: '🌉' },
 	{ id: 'Asia/Shanghai',       city: 'Shanghai',      flag: '🇨🇳' },
-    { id: 'Europe/London',       city: 'London',        flag: '🇬🇧' },
-    { id: 'Europe/Paris',        city: 'Paris',         flag: '🇫🇷' },
-    { id: 'Asia/Tokyo',          city: 'Tokyo',         flag: '🇯🇵' },
     
-    { id: 'Asia/Singapore',      city: 'Singapore',     flag: '🇸🇬' },
+    { id: 'Asia/Tokyo',          city: 'Tokyo',         flag: '🇯🇵' },
     { id: 'Asia/Kolkata',        city: 'Mumbai',        flag: '🇮🇳' },
+
+    { id: 'Asia/Singapore',      city: 'Singapore',     flag: '🇸🇬' },
+	{ id: 'Europe/London',       city: 'London',        flag: '🇬🇧' },
+    { id: 'Europe/Paris',        city: 'Paris',         flag: '🇫🇷' },
     { id: 'Australia/Sydney',    city: 'Sydney',        flag: '🇦🇺' },
     { id: 'America/Chicago',     city: 'Chicago',       flag: '🏙' },
     { id: 'America/Sao_Paulo',   city: 'São Paulo',     flag: '🇧🇷' },
@@ -148,7 +149,15 @@ const ALL_TZ = [
 	{ id: 'UTC', city: 'UTC', flag: '🌍' },
 ]
 
-const timezones  = ref([ALL_TZ[0], ALL_TZ[1], ALL_TZ[2], ALL_TZ[3]])
+const timezones  = ref([
+	ALL_TZ[0], 
+	ALL_TZ[1], 
+	ALL_TZ[2], 
+	ALL_TZ[3],
+	ALL_TZ[4],
+	ALL_TZ[5],
+		ALL_TZ[6],
+])
 const rowsEl     = ref(null)
 const showPicker = ref(false)
 const search     = ref('')
@@ -369,7 +378,7 @@ watch(timezones, () => { rebuildData(); nextTick(updateClocks) }, { deep: true }
 
 <style scoped>
 .timeline-wrap {
-    background: var(--bg-secondary);
+    /* background: var(--bg-secondary); */
     border: 1px solid var(--border);
     border-radius: 8px;
     padding: 20px;
@@ -422,7 +431,7 @@ watch(timezones, () => { rebuildData(); nextTick(updateClocks) }, { deep: true }
 }
 
 /* rows */
-.tz-rows { display: flex; flex-direction: column; gap: 8px; position: relative; }
+.tz-rows { display: flex; flex-direction: column; gap: 18px; position: relative; }
 
 /* UTC header row */
 /* .utc-header-row .tz-city { color: var(--text-muted); font-size: 11px; } */
